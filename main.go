@@ -67,8 +67,6 @@ func increment(dir, label, inc, pre string, release bool, configFile string) {
 	// Get the config
 	config := readConfig(configFile)
 
-	fmt.Println(configFile, config)
-
 	// Check if config contains the label to override dir
 	if len(config.LabelDirs[label]) > 0 {
 		dir = config.LabelDirs[label]
