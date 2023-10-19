@@ -12,6 +12,10 @@ Plenty of examples at the end of this document.
 
 ## Installation
 
+```sh
+go install github.com/bira37/gitver
+```
+
 ## Usage
 
 ### Flags
