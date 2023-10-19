@@ -38,8 +38,8 @@ go install github.com/bira37/gitver
 The CLI controls versioning using a file named `VERSION` containing the version string. For the first time only, run:
 
 ```sh
-gover -new {dir} # to create on specified directory
-gover -new ./ # to create on current directory
+gitver -new {dir} # to create on specified directory
+gitver -new ./ # to create on current directory
 ```
 
 This will create the `VERSION` file. The content of this file will be something like this:
@@ -50,7 +50,7 @@ This will create the `VERSION` file. The content of this file will be something 
 
 ### How it works
 
-First of all, you must commit every pending change inside the repo before. If git repository is not clean, the command will fail. Starting with a VERSION file in current directory containing `0.0.0`, running `gover -i major -p beta -l myapp` will do the following:
+First of all, you must commit every pending change inside the repo before. If git repository is not clean, the command will fail. Starting with a VERSION file in current directory containing `0.0.0`, running `gitver -i major -p beta -l myapp` will do the following:
 
 - Change VERSION file content to `1.0.0-beta`
 - Create a commit with message `myapp-1.0.0-beta` (shown below)
@@ -64,29 +64,29 @@ Date:   Wed Oct 18 20:35:29 2023 -0300
 
 ### Examples
 
-- `gover -d . -i major` with file `./VERSION` containg `0.0.0`:
+- `gitver -d . -i major` with file `./VERSION` containg `0.0.0`:
   + VERSION changes to `1.0.0`
   + TAG created as `1.0.0`
 
-- `gover -i major` with file `./VERSION` containg `0.0.0`:
+- `gitver -i major` with file `./VERSION` containg `0.0.0`:
   + VERSION changes to `1.0.0`
   + TAG created as `1.0.0`
   + Note: if -d is ommited, defaults to current directory
 
-- `gover -i patch` with file `./VERSION` containg `1.0.0`:
+- `gitver -i patch` with file `./VERSION` containg `1.0.0`:
   + VERSION changes to `1.0.1`
   + TAG created as `1.0.1`
 
-- `gover -i minor -p beta` with file `./VERSION` containg `3.0.2`:
+- `gitver -i minor -p beta` with file `./VERSION` containg `3.0.2`:
   + VERSION changes to `3.1.0-beta`
   + TAG created as `3.1.0-beta`
 
-- `gover -d services/service-a -l service-a -i minor` with file `./services/service-a/VERSION` containg `1.2.0`:
+- `gitver -d services/service-a -l service-a -i minor` with file `./services/service-a/VERSION` containg `1.2.0`:
   + VERSION changes to `1.3.0`
   + TAG created as `service-a-1.3.0`
   + Note: This way, you are allowed to manage versioning across multiple services/packages/libs within a monorepo individually
 
-- `gover -d libs/mylib -l mylib -i major -p beta` with file `./libs/mylib/VERSION` containg `2.5.2`:
+- `gitver -d libs/mylib -l mylib -i major -p beta` with file `./libs/mylib/VERSION` containg `2.5.2`:
   + VERSION changes to `3.0.0-beta`
   + TAG created as `mylib-3.0.0-beta`
 
@@ -106,5 +106,5 @@ In order to facilitate the version management across monorepos, we provide the o
 You can provide in this config file the field `labelDirs`. You can provide in this field a way to map labels to directories to improve usability of the CLI. Taking the last example from the previous section, you can upgrade `mylib` to version `3.0.0-beta` with the following command, omitting directory flag, assuming `giver.json` file is in current directory:
 
 ```sh
-gover -l mylib -i major -p beta
+gitver -l mylib -i major -p beta
 ```
