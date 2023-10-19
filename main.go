@@ -168,8 +168,7 @@ func increment(dir, label, inc, pre string, release bool, configFile string) {
 	commitOut, err := commitCmd.Output()
 
 	if err != nil {
-		fmt.Printf("%sError on git commit (probably no changes were made to VERSION file?): %v\n%s", COLOR_RED, err, COLOR_END)
-		os.Exit(1)
+		fmt.Printf("%sGit commit skipped (probably no changes were made to VERSION file?): %v\n%s", COLOR_YELLOW, err, COLOR_END)
 	}
 
 	fmt.Printf("%s%v\n%s", COLOR_YELLOW, string(commitOut), COLOR_END)
