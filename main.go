@@ -40,7 +40,7 @@ func create(dir string) {
 	fmt.Printf("%sCreated VERSION file at %s directory\n%s", COLOR_GREEN, dir, COLOR_END)
 }
 
-func increment(dir, label, inc, pre string) {
+func increment(dir, label, inc, pre string, release bool) {
 	// Check if Git working directory is clean
 	statusCmd := exec.Command("git", "status", "--porcelain")
 	statusOut, err := statusCmd.Output()
@@ -90,9 +90,15 @@ func increment(dir, label, inc, pre string) {
 	default:
 	}
 
-	// Set prerelease if applicable
-	if len(pre) > 0 {
-		*ver, err = ver.SetPrerelease(pre)
+	// Set prerelease
+	if len(pre) > 0 || release {
+		suf := pre
+
+		if release {
+			suf = ""
+		}
+
+		*ver, err = ver.SetPrerelease(suf)
 
 		if err != nil {
 			fmt.Printf("%sError: invalid prerelease value: %v\n%s", COLOR_RED, err, COLOR_END)
@@ -131,7 +137,7 @@ func increment(dir, label, inc, pre string) {
 	commitOut, err := commitCmd.Output()
 
 	if err != nil {
-		fmt.Printf("%sError on git commit: %v\n%s", COLOR_RED, err, COLOR_END)
+		fmt.Printf("%sError on git commit (probably no changes were made to VERSION file?): %v\n%s", COLOR_RED, err, COLOR_END)
 		os.Exit(1)
 	}
 
@@ -144,7 +150,7 @@ func increment(dir, label, inc, pre string) {
 	_, err = tagCmd.Output()
 
 	if err != nil {
-		fmt.Printf("%sError on git tag: %v\n%s", COLOR_RED, err, COLOR_END)
+		fmt.Printf("%sError on git tag (maybe tag already exists?): %v\n%s", COLOR_RED, err, COLOR_END)
 		os.Exit(1)
 	}
 
@@ -159,6 +165,7 @@ func main() {
 	label := flag.String("l", "", "label: sets a prefix label only on the git tag (useful for monorepos to differentiate tags from multiple projects)")
 	inc := flag.String("i", "", "increment mode: the increment type. valid inputs: major | minor | patch")
 	pre := flag.String("p", "", "prerelease: sets a prerelease suffix")
+	release := flag.Bool("r", false, "release: removes prerelease suffix. Overrides prerelease option")
 
 	flag.Parse()
 
@@ -166,6 +173,6 @@ func main() {
 	if len(*newFile) > 0 {
 		create(*newFile)
 	} else {
-		increment(*dir, *label, *inc, *pre)
+		increment(*dir, *label, *inc, *pre, *release)
 	}
 }
