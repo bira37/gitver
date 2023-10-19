@@ -1,4 +1,4 @@
-# gover
+# gitver
 
 - Simple CLI for semantic versioning
 
