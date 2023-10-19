@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
@@ -10,6 +11,10 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 )
+
+type Config struct {
+	LabelDirs map[string]string `json:"labelDirs"`
+}
 
 const (
 	COLOR_GREEN  = "\x1b[32m"
@@ -40,7 +45,35 @@ func create(dir string) {
 	fmt.Printf("%sCreated VERSION file at %s directory\n%s", COLOR_GREEN, dir, COLOR_END)
 }
 
-func increment(dir, label, inc, pre string, release bool) {
+func readConfig(configFile string) Config {
+	file, err := os.ReadFile(configFile)
+	mp := new(Config)
+
+	if err != nil {
+		return *mp
+	}
+
+	err = json.Unmarshal(file, mp)
+
+	if err != nil {
+		fmt.Printf("%sError reading config file (Malformed config json?): %v\n%s", COLOR_RED, err, COLOR_END)
+		os.Exit(1)
+	}
+
+	return *mp
+}
+
+func increment(dir, label, inc, pre string, release bool, configFile string) {
+	// Get the config
+	config := readConfig(configFile)
+
+	fmt.Println(configFile, config)
+
+	// Check if config contains the label to override dir
+	if len(config.LabelDirs[label]) > 0 {
+		dir = config.LabelDirs[label]
+	}
+
 	// Check if Git working directory is clean
 	statusCmd := exec.Command("git", "status", "--porcelain")
 	statusOut, err := statusCmd.Output()
@@ -166,6 +199,7 @@ func main() {
 	inc := flag.String("i", "", "increment mode: the increment type. valid inputs: major | minor | patch")
 	pre := flag.String("p", "", "prerelease: sets a prerelease suffix")
 	release := flag.Bool("r", false, "release: removes prerelease suffix. Overrides prerelease option")
+	configFile := flag.String("config", "./gitver.json", "config: location of the config file. If not provided, try to find in current dir. Config file has priority over directory flag")
 
 	flag.Parse()
 
@@ -173,6 +207,6 @@ func main() {
 	if len(*newFile) > 0 {
 		create(*newFile)
 	} else {
-		increment(*dir, *label, *inc, *pre, *release)
+		increment(*dir, *label, *inc, *pre, *release, *configFile)
 	}
 }

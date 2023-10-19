@@ -89,3 +89,22 @@ Date:   Wed Oct 18 20:35:29 2023 -0300
 - `gover -d libs/mylib -l mylib -i major -p beta` with file `./libs/mylib/VERSION` containg `2.5.2`:
   + VERSION changes to `3.0.0-beta`
   + TAG created as `mylib-3.0.0-beta`
+
+### Monorepos and multiple VERSION files
+
+In order to facilitate the version management across monorepos, we provide the option to use a config file. It tries to find the config file in current directory with the name `gitver.json`. If you need to place your config file in another directory or with another name, use the flag `-config {path to config file}` flag to specify the location. The structure is shown below:
+
+```json
+{
+  "labelDirs": {
+    "mylib": "./libs/mylib"
+  }
+}
+
+```
+
+You can provide in this config file the field `labelDirs`. You can provide in this field a way to map labels to directories to improve usability of the CLI. Taking the last example from the previous section, you can upgrade `mylib` to version `3.0.0-beta` with the following command, omitting directory flag, assuming `giver.json` file is in current directory:
+
+```sh
+gover -l mylib -i major -p beta
+```
