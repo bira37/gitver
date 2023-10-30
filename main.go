@@ -13,7 +13,10 @@ import (
 )
 
 type Config struct {
-	LabelDirs map[string]string `json:"labelDirs"`
+	LabelDirs       map[string]string `json:"labelDirs"`
+	AllowedBranches []string          `json:"allowedBranches"`
+	ForceLabel      bool              `json:"forceLabel"`
+	ForceLabelDirs  bool              `json:"forceLabelDirs"`
 }
 
 const (
@@ -66,6 +69,35 @@ func readConfig(configFile string) Config {
 func increment(dir, label, inc, pre string, release bool, configFile string) {
 	// Get the config
 	config := readConfig(configFile)
+
+	// Check if label is required to exist in labelDirs, and then check if exists
+	if config.ForceLabelDirs && len(label) > 0 && len(config.LabelDirs[label]) == 0 {
+		fmt.Printf("%sError: A label is required to exist on labelDirs to create the tag\n%s", COLOR_RED, COLOR_END)
+		os.Exit(1)
+	}
+
+	// Check if label is required to be set, then check if it is set
+	if config.ForceLabel && len(label) == 0 {
+		fmt.Printf("%sError: A label is required to be passed to create the tag\n%s", COLOR_RED, COLOR_END)
+		os.Exit(1)
+	}
+
+	// Check if there are branch restrictions
+	if config.AllowedBranches != nil {
+		currentBranchCmd := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD")
+		currentBranch, err := currentBranchCmd.Output()
+
+		if err != nil {
+			fmt.Printf("%sError: unable to get current branch: %v\n%s", COLOR_RED, err, COLOR_END)
+			os.Exit(1)
+		}
+
+		if !slices.Contains(config.AllowedBranches, strings.TrimSpace(string(currentBranch))) {
+			fmt.Println(strings.TrimSpace(string(currentBranch)))
+			fmt.Printf("%sError: current branch is not allowed to be tagged\n%s", COLOR_RED, COLOR_END)
+			os.Exit(1)
+		}
+	}
 
 	// Check if config contains the label to override dir
 	if len(config.LabelDirs[label]) > 0 {

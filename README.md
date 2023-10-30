@@ -108,3 +108,23 @@ You can provide in this config file the field `labelDirs`. You can provide in th
 ```sh
 gitver -l mylib -i major -p beta
 ```
+
+### Other Configs
+
+In addition to `labelDirs` config, there are some other changes you can make to the tag generation flow on `gitver.json` file, the complete JSON is shown below:
+
+```json
+{
+  "labelDirs": {
+    "mylib": "./libs/mylib"
+  },
+  "forceLabel": true,
+  "forceLabelDirs": true,
+  "allowedBranches": ["main"]
+}
+
+```
+
+- `forceLabel` forces the label to be a non empty string
+- `forceLabelDirs` forces the label (if passed) to exist on `labelDirs` config
+- `allowedBranches` only allows tag generation on specified branches
