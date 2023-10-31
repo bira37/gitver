@@ -7,16 +7,16 @@ import (
 	"os"
 	"os/exec"
 	"slices"
+	"sort"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/manifoldco/promptui"
 )
 
 type Config struct {
-	LabelDirs       map[string]string `json:"labelDirs"`
-	AllowedBranches []string          `json:"allowedBranches"`
-	ForceLabel      bool              `json:"forceLabel"`
-	ForceLabelDirs  bool              `json:"forceLabelDirs"`
+	AllowedLabels   []string `json:"allowedLabels"`
+	AllowedBranches []string `json:"allowedBranches"`
 }
 
 const (
@@ -25,28 +25,6 @@ const (
 	COLOR_YELLOW = "\x1b[33m"
 	COLOR_END    = "\x1b[0m"
 )
-
-func create(dir string) {
-	dir = strings.TrimSuffix(dir, "/")
-
-	file, err := os.Create(fmt.Sprintf("%s/VERSION", dir))
-
-	if err != nil {
-		fmt.Printf("%sError creating file: %v\n%s", COLOR_RED, err, COLOR_END)
-		os.Exit(1)
-	}
-
-	defer file.Close()
-
-	_, err = file.Write([]byte("0.0.0"))
-
-	if err != nil {
-		fmt.Printf("%sError creating file: %v\n%s", COLOR_RED, err, COLOR_END)
-		os.Exit(1)
-	}
-
-	fmt.Printf("%sCreated VERSION file at %s directory\n%s", COLOR_GREEN, dir, COLOR_END)
-}
 
 func readConfig(configFile string) Config {
 	file, err := os.ReadFile(configFile)
@@ -66,20 +44,91 @@ func readConfig(configFile string) Config {
 	return *mp
 }
 
+func getLatestTag(label string) string {
+	// List all tags
+	tags := make([]string, 0)
+	if len(label) > 0 {
+		// Remove label from tag
+		tagLabelCmd := exec.Command("git", "--no-pager", "tag", "-l", fmt.Sprintf("%s-*", label))
+		tagLabelOutput, err := tagLabelCmd.Output()
+		if err != nil {
+			fmt.Printf("%sError on git tag list: %v\n%s", COLOR_RED, err, COLOR_END)
+			os.Exit(1)
+		}
+		rawTags := strings.Split(string(tagLabelOutput), "\n")
+
+		for _, rawTag := range rawTags {
+			tag := strings.Replace(rawTag, fmt.Sprintf("%s-", label), "", 1)
+			tag = strings.TrimSpace(tag)
+			if len(tag) == 0 {
+				continue
+			}
+			tags = append(tags, tag)
+		}
+	} else {
+		// Do not need to remove label from tag
+		tagCmd := exec.Command("git", "--no-pager", "tag")
+		tagOutput, err := tagCmd.Output()
+		if err != nil {
+			fmt.Printf("%sError on git tag list: %v\n%s", COLOR_RED, err, COLOR_END)
+			os.Exit(1)
+		}
+		rawTags := strings.Split(string(tagOutput), "\n")
+		for _, rawTag := range rawTags {
+			tag := strings.TrimSpace(rawTag)
+			if len(tag) == 0 {
+				continue
+			}
+			tags = append(tags, tag)
+		}
+	}
+
+	// Get the latest tag
+	sort.Slice(tags, func(i, j int) bool {
+		a, err := semver.NewVersion(tags[i])
+		b, err2 := semver.NewVersion(tags[j])
+
+		if err != nil || err2 != nil {
+			fmt.Printf("%sError: tags in this project does not follow SemVer format\n%s", COLOR_RED, COLOR_END)
+			os.Exit(1)
+		}
+
+		return a.Compare(b) >= 0
+	})
+
+	return tags[0]
+}
+
+func yesNoPrompt(label string) bool {
+	prompt := promptui.Select{
+		Label: fmt.Sprintf("%s", label),
+		Items: []string{"no", "yes"},
+	}
+	_, result, err := prompt.Run()
+	if err != nil {
+		fmt.Printf("%sError: prompt failed:%v\n%s", COLOR_RED, err, COLOR_END)
+		os.Exit(1)
+	}
+	return result == "yes"
+}
+
 func increment(dir, label, inc, pre string, release bool, configFile string) {
 	// Get the config
 	config := readConfig(configFile)
 
-	// Check if label is required to exist in labelDirs, and then check if exists
-	if config.ForceLabelDirs && len(label) > 0 && len(config.LabelDirs[label]) == 0 {
-		fmt.Printf("%sError: A label is required to exist on labelDirs to create the tag\n%s", COLOR_RED, COLOR_END)
-		os.Exit(1)
-	}
+	// Check label restrictions
+	if config.AllowedLabels != nil {
+		// Check if label is required to exist, and then check if exists
+		if len(label) == 0 {
+			fmt.Printf("%sError: A label is required to exist to create the tag\n%s", COLOR_RED, COLOR_END)
+			os.Exit(1)
+		}
 
-	// Check if label is required to be set, then check if it is set
-	if config.ForceLabel && len(label) == 0 {
-		fmt.Printf("%sError: A label is required to be passed to create the tag\n%s", COLOR_RED, COLOR_END)
-		os.Exit(1)
+		// Check if label is included on allowed labels
+		if !slices.Contains(config.AllowedLabels, label) {
+			fmt.Printf("%sError: The label is not allowed to be used\n%s", COLOR_RED, COLOR_END)
+			os.Exit(1)
+		}
 	}
 
 	// Check if there are branch restrictions
@@ -99,11 +148,6 @@ func increment(dir, label, inc, pre string, release bool, configFile string) {
 		}
 	}
 
-	// Check if config contains the label to override dir
-	if len(config.LabelDirs[label]) > 0 {
-		dir = config.LabelDirs[label]
-	}
-
 	// Check if Git working directory is clean
 	statusCmd := exec.Command("git", "status", "--porcelain")
 	statusOut, err := statusCmd.Output()
@@ -118,24 +162,28 @@ func increment(dir, label, inc, pre string, release bool, configFile string) {
 		os.Exit(1)
 	}
 
+	// Fetch git changes and tags
+	fetchCmd := exec.Command("git", "fetch", "--all")
+	_, err = fetchCmd.Output()
+
+	if err != nil {
+		fmt.Printf("%sError executing git fetch command: %v\n%s", COLOR_RED, err, COLOR_END)
+		os.Exit(1)
+	}
+
+	// Get the latest tag
+	latestTag := getLatestTag(label)
+
+	fmt.Println(latestTag)
+
 	// Check for valid increment mode
 	if len(inc) > 0 && !slices.Contains([]string{"major", "minor", "patch"}, inc) {
 		fmt.Printf("%sError: invalid value for increment mode\n%s", COLOR_RED, COLOR_END)
 		os.Exit(1)
 	}
 
-	dir = strings.TrimSuffix(dir, "/")
-
-	// Check for valid VERSION file
-	content, err := os.ReadFile(fmt.Sprintf("%s/VERSION", dir))
-
-	if err != nil {
-		fmt.Printf("%sError reading file: %v\n%s", COLOR_RED, err, COLOR_END)
-		os.Exit(1)
-	}
-
 	// Read version
-	ver, err := semver.NewVersion(string(content))
+	ver, err := semver.NewVersion(latestTag)
 
 	if err != nil {
 		fmt.Printf("%sError: could not parse version: %v\n%s", COLOR_RED, err, COLOR_END)
@@ -169,44 +217,17 @@ func increment(dir, label, inc, pre string, release bool, configFile string) {
 		}
 	}
 
-	// Write to file
-	err = os.WriteFile(fmt.Sprintf("%s/VERSION", dir), []byte(ver.String()), 0644)
-
-	if err != nil {
-		fmt.Printf("%sError writing to file: %v\n%s", COLOR_RED, err, COLOR_END)
-		os.Exit(1)
-	}
-
-	fmt.Printf("%sUpdated VERSION to %s\n%s", COLOR_GREEN, ver.String(), COLOR_END)
-
-	// Commit VERSION change
+	// Create tag
 	prefix := ""
 
 	if len(label) > 0 {
 		prefix = fmt.Sprintf("%s-", label)
 	}
-
-	addCmd := exec.Command("git", "add", ".")
-	addOut, err := addCmd.Output()
-
-	if err != nil {
-		fmt.Printf("%sError on git add: %v\n%s", COLOR_RED, err, COLOR_END)
-		os.Exit(1)
-	}
-
-	fmt.Printf("%s%v\n%s", COLOR_YELLOW, string(addOut), COLOR_END)
-
-	commitCmd := exec.Command("git", "commit", "-m", fmt.Sprintf(`"%s%s"`, prefix, ver.String()))
-	commitOut, err := commitCmd.Output()
-
-	if err != nil {
-		fmt.Printf("%sGit commit skipped (probably no changes were made to VERSION file?): %v\n%s", COLOR_YELLOW, err, COLOR_END)
-	}
-
-	fmt.Printf("%s%v\n%s", COLOR_YELLOW, string(commitOut), COLOR_END)
-
-	// Create tag
 	tag := fmt.Sprintf("%s%s", prefix, ver.String())
+
+	if !yesNoPrompt(fmt.Sprintf("Creating tag <%s>. Are you sure?", tag)) {
+		os.Exit(0)
+	}
 
 	tagCmd := exec.Command("git", "tag", "-a", tag, "-m", fmt.Sprintf(`"%s"`, tag))
 	_, err = tagCmd.Output()
@@ -217,12 +238,21 @@ func increment(dir, label, inc, pre string, release bool, configFile string) {
 	}
 
 	fmt.Printf("%sSuccesfully tagged %s\n%s", COLOR_GREEN, tag, COLOR_END)
+
+	// Push tag
+	pushCmd := exec.Command("git", "push", "--tags")
+	_, err = pushCmd.Output()
+
+	if err != nil {
+		fmt.Printf("%sError pushing tags: %v\n%s", COLOR_RED, err, COLOR_END)
+		os.Exit(1)
+	}
+
+	fmt.Printf("%sSuccesfully pushed tag %s\n%s", COLOR_GREEN, tag, COLOR_END)
 }
 
 func main() {
 	// CLI
-	newFile := flag.String("new", "", "new file: creates a new file in specified directory with version <0.0.0>. Every other flag is ignored")
-
 	dir := flag.String("d", "./", "directory: the path for the VERSION file")
 	label := flag.String("l", "", "label: sets a prefix label only on the git tag (useful for monorepos to differentiate tags from multiple projects)")
 	inc := flag.String("i", "", "increment mode: the increment type. valid inputs: major | minor | patch")
@@ -233,9 +263,5 @@ func main() {
 	flag.Parse()
 
 	// Execute
-	if len(*newFile) > 0 {
-		create(*newFile)
-	} else {
-		increment(*dir, *label, *inc, *pre, *release, *configFile)
-	}
+	increment(*dir, *label, *inc, *pre, *release, *configFile)
 }
