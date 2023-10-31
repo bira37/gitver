@@ -162,12 +162,12 @@ func increment(label, inc, pre string, release bool, configFile string) {
 		os.Exit(1)
 	}
 
-	// Fetch git changes and tags
-	fetchCmd := exec.Command("git", "fetch", "--all")
-	_, err = fetchCmd.Output()
+	// Pull git changes and tags
+	pullCmd := exec.Command("git", "pull", "--tags")
+	_, err = pullCmd.Output()
 
 	if err != nil {
-		fmt.Printf("%sError executing git fetch command: %v\n%s", COLOR_RED, err, COLOR_END)
+		fmt.Printf("%sError executing git pull command: %v\n%s", COLOR_RED, err, COLOR_END)
 		os.Exit(1)
 	}
 
