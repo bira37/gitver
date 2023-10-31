@@ -174,8 +174,6 @@ func increment(label, inc, pre string, release bool, configFile string) {
 	// Get the latest tag
 	latestTag := getLatestTag(label)
 
-	fmt.Println(latestTag)
-
 	// Check for valid increment mode
 	if len(inc) > 0 && !slices.Contains([]string{"major", "minor", "patch"}, inc) {
 		fmt.Printf("%sError: invalid value for increment mode\n%s", COLOR_RED, COLOR_END)
