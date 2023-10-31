@@ -112,7 +112,7 @@ func yesNoPrompt(label string) bool {
 	return result == "yes"
 }
 
-func increment(dir, label, inc, pre string, release bool, configFile string) {
+func increment(label, inc, pre string, release bool, configFile string) {
 	// Get the config
 	config := readConfig(configFile)
 
@@ -253,7 +253,6 @@ func increment(dir, label, inc, pre string, release bool, configFile string) {
 
 func main() {
 	// CLI
-	dir := flag.String("d", "./", "directory: the path for the VERSION file")
 	label := flag.String("l", "", "label: sets a prefix label only on the git tag (useful for monorepos to differentiate tags from multiple projects)")
 	inc := flag.String("i", "", "increment mode: the increment type. valid inputs: major | minor | patch")
 	pre := flag.String("p", "", "prerelease: sets a prerelease suffix")
@@ -263,5 +262,5 @@ func main() {
 	flag.Parse()
 
 	// Execute
-	increment(*dir, *label, *inc, *pre, *release, *configFile)
+	increment(*label, *inc, *pre, *release, *configFile)
 }

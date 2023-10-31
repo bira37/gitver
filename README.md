@@ -23,8 +23,6 @@ go install github.com/bira37/gitver
 ```
 -config string
       config: location of the config file. If not provided, try to find in current dir. Config file has priority over directory flag (default "./gitver.json")
--d string
-      directory: the path for the VERSION file (default "./")
 -i string
       increment mode: the increment type. valid inputs: major | minor | patch
 -l string
@@ -48,30 +46,20 @@ Date:   Wed Oct 18 20:35:29 2023 -0300
 
 ### Examples
 
-- `gitver -d . -i major` with latest version as `0.0.0`:
-  + VERSION changes to `1.0.0`
-  + TAG created as `1.0.0`
-
 - `gitver -i major` with latest version as `0.0.0`:
-  + VERSION changes to `1.0.0`
   + TAG created as `1.0.0`
-  + Note: if -d is ommited, defaults to current directory
 
 - `gitver -i patch` with latest version as `1.0.0`:
-  + VERSION changes to `1.0.1`
   + TAG created as `1.0.1`
 
 - `gitver -i minor -p beta` with latest version as `3.0.2`:
-  + VERSION changes to `3.1.0-beta`
   + TAG created as `3.1.0-beta`
 
-- `gitver -d services/service-a -l service-a -i minor` with latest tag for `service-a` as `service-a-1.2.0`:
-  + VERSION changes to `1.3.0`
+- `gitver -l service-a -i minor` with latest tag for `service-a` as `service-a-1.2.0`:
   + TAG created as `service-a-1.3.0`
   + Note: This way, you are allowed to manage versioning across multiple services/packages/libs within a monorepo individually
 
-- `gitver -d libs/mylib -l mylib -i major -p beta` with latest tag for `mylib` as `mylib-2.5.2`:
-  + VERSION changes to `3.0.0-beta`
+- `gitver -l mylib -i major -p beta` with latest tag for `mylib` as `mylib-2.5.2`:
   + TAG created as `mylib-3.0.0-beta`
 
 ### Configs
