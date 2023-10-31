@@ -171,6 +171,8 @@ func increment(label, inc, pre string, release bool, configFile string) {
 		os.Exit(1)
 	}
 
+	fmt.Printf("%sPulled remote changes and tags\n%s", COLOR_GREEN, COLOR_END)
+
 	// Get the latest tag
 	latestTag := getLatestTag(label)
 
