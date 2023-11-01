@@ -99,9 +99,9 @@ func getLatestTag(label string) string {
 	return tags[0]
 }
 
-func yesNoPrompt(label string) bool {
+func yesNoPrompt(text string) bool {
 	prompt := promptui.Select{
-		Label: fmt.Sprintf("%s", label),
+		Label: fmt.Sprintf("%s", text),
 		Items: []string{"no", "yes"},
 	}
 	_, result, err := prompt.Run()
@@ -112,16 +112,44 @@ func yesNoPrompt(label string) bool {
 	return result == "yes"
 }
 
+func labelSelectionPrompt(allowedLabels []string) (string, bool) {
+	options := make([]string, len(allowedLabels))
+	copy(options, allowedLabels)
+	options = append(options, "[cancel]")
+
+	searcher := func(input string, idx int) bool {
+		fmt.Println(input, idx, options)
+		return strings.Contains(options[idx], input) || options[idx] == "[cancel]"
+	}
+
+	prompt := promptui.Select{
+		Label:             "Select the label from those shown below",
+		Items:             options,
+		Searcher:          searcher,
+		StartInSearchMode: false,
+		Size:              5,
+	}
+	_, result, err := prompt.Run()
+	if err != nil {
+		fmt.Printf("%sError: prompt failed:%v\n%s", COLOR_RED, err, COLOR_END)
+		os.Exit(1)
+	}
+	return result, result == "[cancel]"
+}
+
 func increment(label, inc, pre string, release bool, configFile string) {
 	// Get the config
 	config := readConfig(configFile)
 
 	// Check label restrictions
 	if config.AllowedLabels != nil {
-		// Check if label is required to exist, and then check if exists
+		// Check if label is required to exist, and then check if exists. If not, open a prompt to select
 		if len(label) == 0 {
-			fmt.Printf("%sError: A label is required to exist to create the tag\n%s", COLOR_RED, COLOR_END)
-			os.Exit(1)
+			var canceled bool
+			label, canceled = labelSelectionPrompt(config.AllowedLabels)
+			if canceled {
+				os.Exit(0)
+			}
 		}
 
 		// Check if label is included on allowed labels
