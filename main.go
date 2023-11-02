@@ -118,7 +118,6 @@ func labelSelectionPrompt(allowedLabels []string) (string, bool) {
 	options = append(options, "[cancel]")
 
 	searcher := func(input string, idx int) bool {
-		fmt.Println(input, idx, options)
 		return strings.Contains(options[idx], input) || options[idx] == "[cancel]"
 	}
 
