@@ -49,7 +49,7 @@ func getLatestTag(label string) string {
 	tags := make([]string, 0)
 	if len(label) > 0 {
 		// Remove label from tag
-		tagLabelCmd := exec.Command("git", "--no-pager", "tag", "-l", fmt.Sprintf("%s-*", label))
+		tagLabelCmd := exec.Command("git", "--no-pager", "tag", "-l", fmt.Sprintf("%s-[0-9]*", label))
 		tagLabelOutput, err := tagLabelCmd.Output()
 		if err != nil {
 			fmt.Printf("%sError on git tag list: %v\n%s", COLOR_RED, err, COLOR_END)
