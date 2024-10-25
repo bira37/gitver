@@ -225,6 +225,10 @@ func increment(labelStr, inc, pre string, release bool, configFile string) {
 		}
 	}
 
+	if len(labels) == 0 {
+		labels = append(labels, "")
+	}
+
 	// Check if there are branch restrictions
 	if config.AllowedBranches != nil {
 		currentBranchCmd := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD")
